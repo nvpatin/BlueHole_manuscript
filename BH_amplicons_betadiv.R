@@ -16,7 +16,7 @@ library(dplyr)
 
 microbe <- column_to_rownames(table_hole_2019_water_phyloseq_filt, 'ID')
 tax_table <- column_to_rownames(taxonomy_phyloseq, 'ID')
-metadata <- column_to_rownames(BH_hole_water_metadata_phyloseq_v2, 'Sample')
+metadata <- column_to_rownames(BH_hole_water_metadata_phyloseq, 'Sample')
 
 # convert all to matrices
 microbe <- as.matrix(microbe)
@@ -80,19 +80,13 @@ amelt <- melt(alpha, id=c("Sample", "DepthGroup"))
 p1 <- ggplot(amelt, aes(variable, value, colour=DepthGroup))
 p1 + geom_boxplot() + theme_classic() + facet_wrap(~variable, scales="free")
 
+### BETA DIVERSITY #################
+
 # Pull out Bray-Curtis distances as a square distance matrix
 bc <- divnet_asv$'bray-curtis'
 euc <- divnet_asv$'euclidean'
 
-# fix weighted unifrac distance matrix
-unw_unifrac <- as.data.frame(distance_matrix)
-rownames(unw_unifrac) <- unw_unifrac[,1]
-unw_unifrac[,1] <- NULL
-
 PCA <- prcomp(x=bc)
-PCAi <- data.frame(PCA$x)
-
-PCA <- prcomp(x=unw_unifrac)
 PCAi <- data.frame(PCA$x)
 
 autoplot(PCA)
@@ -100,12 +94,11 @@ p <- ggplot(PCAi, aes(x=PC1, y=PC2)) + geom_point(size=3)
 
 # copy data frame and add any metadata columns
 bc_meta <- bc
+# make sure the metadata is in the correct sample order
+metadata <- metadata[ order(row.names(metadata)), ]
+
 bc_meta$Depth = metadata$DepthGroup
 bc_meta$Month = as.factor(metadata$Month)
-
-unw_unifrac_meta <- unw_unifrac
-unw_unifrac_meta$Depth = metadata$Depth
-unw_unifrac_meta$Season = metadata$Month
 
 PCAi <- data.frame(PCA$x, group=bc_meta$Depth, shape=bc_meta$Month)
 
@@ -115,26 +108,9 @@ cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
 p <- ggplot(PCAi, aes(x=PC1, y=PC2)) + 
     geom_point(alpha=0.8, size=4, aes(fill=group, shape=shape)) +
     scale_shape_manual(values=c(21, 24)) + 
-    scale_fill_jco() + labs(fill="Depth Group", shape="Month") +
+    scale_fill_manual(values=cbp1) + labs(fill="Depth Group", shape="Month") +
     guides(fill=guide_legend(override.aes=list(shape=21)))
     
 p + theme_classic() + labs(x = "PC1", y = "PC2") 
-
-# Use metaMDS in vegan to run NMDS analysis on Bray-Curtis distance matrix
-nmds_bc <- metaMDS(bc)
-nmds_euc <- metaMDS(euc)
-
-# extract scores from NMDS
-data.scores <- as.data.frame(scores(nmds_bc))
-data.scores <- as.data.frame(scores(nmds_euc))
-
-# add in metadata
-data.scores$Sample <- BlueHole_all_water_metadata_phyloseq$Sample
-data.scores$Depth <- BlueHole_all_water_metadata_phyloseq$Depth
-data.scores$Month <- BlueHole_all_water_metadata_phyloseq$Month
-
-# Plot nMDS
-p <- ggplot(data.scores, aes(x=NMDS1, y=NMDS2)) + geom_point(size=3, aes(shape=Month, colour=Depth))
-p
 
 
