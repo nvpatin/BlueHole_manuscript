@@ -30,6 +30,7 @@ MET = sample_data(metadata)
 physeq = phyloseq(ASV, TAX, MET)
 
 ### ALPHA DIVERSITY ###
+
 # Aggregate taxa at the order or family level
 water <- physeq %>% tax_glom("Order")
 water <- physeq %>% tax_glom("Family")
@@ -38,12 +39,11 @@ ba <- breakaway(water)
 
 plot(ba, water, color = "DepthGroup")
 
-# Run DivNet
+# Run DivNet at various taxonomic levels: phylum, genus, and ASV
+# For Blue Hole manuscript I ran it at the ASV level using the ASV ID provided
 divnet_phylum <- divnet(tax_glom(physeq, taxrank="Phylum"), X="Location", ncores=6)
 divnet_genus <- divnet(tax_glom(physeq, taxrank="Genus"), X="Depth", ncores=4)
 divnet_asv <- divnet(physeq, base="580c721cd115033cebadc0d909e4cd83", ncores=4)
-divnet_asv <- divnet(physeq, base="56f3f29aaa149dc5b511e5dd1b4c184c", ncores=4)
-divnet_asv <- divnet(physeq, base="29cde7953b89ed299cf71fc3632c9745", ncores=4)
 
 # Alpha diversity
 plot(divnet_asv$shannon, 
@@ -80,18 +80,20 @@ amelt <- melt(alpha, id=c("Sample", "DepthGroup"))
 p1 <- ggplot(amelt, aes(variable, value, colour=DepthGroup))
 p1 + geom_boxplot() + theme_classic() + facet_wrap(~variable, scales="free")
 
-### BETA DIVERSITY #################
+################ BETA DIVERSITY #################
 
 # Pull out Bray-Curtis distances as a square distance matrix
 bc <- divnet_asv$'bray-curtis'
-euc <- divnet_asv$'euclidean'
 
+# Base R PCA function from distance matrix
 PCA <- prcomp(x=bc)
 PCAi <- data.frame(PCA$x)
 
+# Base R plotting for quick check
 autoplot(PCA)
 p <- ggplot(PCAi, aes(x=PC1, y=PC2)) + geom_point(size=3)
 
+# Pretty plot in ggplot2
 # copy data frame and add any metadata columns
 bc_meta <- bc
 # make sure the metadata is in the correct sample order
@@ -102,6 +104,7 @@ bc_meta$Month = as.factor(metadata$Month)
 
 PCAi <- data.frame(PCA$x, group=bc_meta$Depth, shape=bc_meta$Month)
 
+# Make a custom color pallette
 cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
           "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
@@ -112,5 +115,3 @@ p <- ggplot(PCAi, aes(x=PC1, y=PC2)) +
     guides(fill=guide_legend(override.aes=list(shape=21)))
     
 p + theme_classic() + labs(x = "PC1", y = "PC2") 
-
-
