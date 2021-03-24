@@ -1,0 +1,1 @@
+These scripts were used to perform bioinformatic analyses and make plots used in the manuscript "Gulf of Mexico Blue Hole harbors high levels of novel microbial taxa" (Patin et al. 2021 ISMEJ; https://doi.org/10.1038/s41396-021-00917-x).
